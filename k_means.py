@@ -12,7 +12,7 @@ def vectorizedKMeans(graph, k):
         for page in graph:
             closest_mean = None
             for mean in centroids:
-                if closest_mean == None or torch.norm(torch.add(page.embedding, -mean)) < torch.norm(torch.add(page.embedding, -closest_mean)):
+                if closest_mean == None or torch.norm(torch.add(page.embedding(), -mean)) < torch.norm(torch.add(page.embedding(), -closest_mean)):
                     closest_mean = mean
             page.mean = closest_mean
 
@@ -21,10 +21,10 @@ def vectorizedKMeans(graph, k):
             num = 0
             for page in graph:
                 if page.mean = mean:
-                    sum_inputs += page.embedding
+                    sum_inputs += page.embedding()
                     num += 1
             mean = sum_inputs/num
 
-graph = Graph()
+g = graph.Graph()
 
-vectorizedKMeans(graph, 100000)
+vectorizedKMeans(g, 100000)
