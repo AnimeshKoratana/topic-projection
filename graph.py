@@ -10,6 +10,8 @@ class Page():
         self._children = None
         self._embedding = None
 
+        self.mean = None
+
     def text(self):
         if self._text is None:
             self._text = self.graph.get_article_text(self.idx)
