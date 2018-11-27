@@ -1,3 +1,7 @@
+# Wiki Files
+wiki.hdf5
+wiki_emb.hdf5
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
