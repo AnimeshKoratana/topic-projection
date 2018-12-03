@@ -1,7 +1,7 @@
 import networkx as nx
 import gensim.models as g
-model="data/enwiki_dbow/doc2vec.bin"
-m = g.Doc2Vec.load(model)
+# model="data/enwiki_dbow/doc2vec.bin"
+# m = g.Doc2Vec.load(model)
 
 #inference hyper-parameters
 start_alpha=0.01
@@ -12,6 +12,7 @@ class Page():
         assert(article_name is not None)
 
         self.idx = index
+        self.cluster = None
         self._name = article_name
         self.graph = graph
 
@@ -88,7 +89,13 @@ class Graph():
         for link in self._links:
             source, target = link.split('\t')
             source, target = source.strip(), target.strip()
-            self.graph.add_edge(self._articles[idx_of(source)], self._articles[idx_of(target)])
+            self.graph.add_edge(self._articles[idx_of(source)], self._articles[idx_of(target)], weight=1)
+        x = []
+        for page in self.graph.nodes:
+            if len(list(self.graph.neighbors(page))) == 0:
+                x.append(page)
+        for p in x:
+            self.graph.remove_node(p)
 
     def __len__(self):
         return len(list(self.graph.nodes))
