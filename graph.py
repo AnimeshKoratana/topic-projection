@@ -1,11 +1,18 @@
-import h5py
-import torch
-import numpy as np
-from queue import Queue
+import networkx as nx
+import gensim.models as g
+model="data/enwiki_dbow/doc2vec.bin"
+m = g.Doc2Vec.load(model)
+
+#inference hyper-parameters
+start_alpha=0.01
+infer_epoch=1000
 
 class Page():
-    def __init__(self, index, graph):
+    def __init__(self, index, article_name, graph):
+        assert(article_name is not None)
+
         self.idx = index
+        self._name = article_name
         self.graph = graph
 
         self._text = None
@@ -18,95 +25,72 @@ class Page():
     def __eq__(self, x):
         return self.idx == x.idx
 
+    def __hash__(self):
+        return self.idx
+
+    def __sub__(self, other):
+        assert(isinstance(other, Page))
+        return self.graph.shortest_path_length(self, other)
+
+    def shortest_path_length_to(self, other):
+        return self.__sub__(other)
+
     def text(self):
         if self._text is None:
-            self._text = self.graph.get_article_text(self.idx)
+            with open('data/plaintext_articles/{}.txt'.format(self.title()), 'r') as t:
+                text = t.read().split('\n')[1:]
+                self._text = ' '.join(text).strip()
         return self._text
 
     def title(self):
-        if self._title is None:
-            self._title = self.graph.get_article_title(self.idx)
-        return self._title
+        assert (self._name is not None)
+        return self._name
 
     def children(self):
-        if self._children is None:
-            self._children = [Page(i, self.graph) for i in self.graph.get_article_links(self.idx)]
         return self._children
 
     def embedding(self):
-        if self._embedding is None:
-            self._embedding = self.graph.get_article_emb(self.idx)
+        if self._embedding is not None:
+            self._embedding = m.infer_vector(self.text().split(), alpha=start_alpha, steps=infer_epoch)
         return self._embedding
-        # return torch.from_numpy(self._embedding)
-
 
 class Graph():
-    def __init__(self, seed = 2586555, num_pages= 1000):
-        self.max_pages = 5946517
-        self.num_pages = num_pages
-        if seed is None:
-            seed = np.random.randint(0, self.max_pages)
-            print("Randomly Chose Seed: ", seed)
-        self.seed = seed % self.max_pages
+    def __init__(self, seed = None, num_pages= "all"):
+        self.graph = nx.Graph()
+        print("Loading Dataset")
+        l = open("data/wikispeedia_paths-and-graph/links.tsv", 'r')
+        self._links = l.read().split("\n")[12:-1]
+        l.close()
 
-        self.w = h5py.File("wiki.hdf5", 'r')
+        self._articles = []
+        a = open("data/wikispeedia_paths-and-graph/articles.tsv", 'r')
+        lines = a.read().split("\n")[12:-1]
+        for idx, line in enumerate(lines):
+            article = line.strip(' ')
+            article = article.strip("\t")
+            article.strip()
+            if article is not None:
+                pg = Page(idx, article, self.graph)
+                self._articles.append(pg)
+        a.close()
+        self._build_graph()
+        print("Done.")
 
-        # Precalculated Embeddings
-        ft = h5py.File("wiki_emb.hdf5", 'r')
-        self.e = {}
-        self.e['emb'] = ft['emb'].value
-        if 'mask' in ft:
-            self.e['mask'] = ft['mask'].value
-        else:
-            self.e = h5py.File("wiki_emb.hdf5", 'r')
+    def _build_graph(self):
+        def idx_of(text):
+            for idx, a in enumerate(self._articles):
+                if text == a.title():
+                    return idx
 
-        self.subgraph = self._init_graph(self.seed)
+        for page in self._articles:
+            self.graph.add_node(page)
 
-    def _init_graph(self, seed):
-        subgraph = []
-
-        children = Queue()
-        children_idx = [seed]
-        children.put(Page(seed, self))
-        while len(subgraph) < self.num_pages:
-            node = children.get()
-            subgraph.append(node)
-            for c in node.children():
-                if c.idx not in children_idx:
-                    children.put(c)
-                    children_idx.append(c.idx)
-
-        return subgraph
+        for link in self._links:
+            source, target = link.split('\t')
+            source, target = source.strip(), target.strip()
+            self.graph.add_edge(self._articles[idx_of(source)], self._articles[idx_of(target)])
 
     def __len__(self):
-        return self.num_pages
-
-    def __getitem__(self, key):
-        return self.subgraph[key]
-
-    def __iter__(self):
-        self.iter_subgraph = iter(self.subgraph)
-        return self
-
-    def __next__(self):
-        return next(self.iter_subgraph)
-
-    def get_article_title(self, article_id):
-        return self.w['title'][article_id]
-
-    def get_article_text(self, article_id):
-        return self.w['text'][article_id]
-
-    def get_article_emb(self, article_id):
-        return self.e['emb'][article_id]
-
-    def get_title_iter(self):
-        return self.w['title']
-
-    def get_article_links(self, article_id):
-        links = self.w["links".encode()][article_id].strip().decode().split(' ')
-        if links[0] != '':
-            links = [int(i) for i in links]
-        else:
-            links = []
-        return links
+        return len(list(self.graph.nodes))
+    def nodes(self):
+        return self._articles
