@@ -26,7 +26,7 @@ orig_graph = graph.Graph()
 #             distance = 1-(np.linalg.norm(np.subtract(page.embedding(),page2.embedding())))/maxValue
 #             print(distance)
 #             G.add_edge(page.idx, page2.idx, weight=distance)
-# 
+#
 # used = set()
 # for page in orig_graph:
 #     used.add(page.idx)
@@ -42,11 +42,9 @@ print("Finished creating NetworkX graph")
 iterations = 10
 for z in range(0,iterations):
     gn = list(G.nodes)
-    print(gn)
     # gn = [int(gn[i]) for i in range(len(gn))]
     # I randomize the nodes to give me an arbitrary start point
     random.shuffle(gn)
-    print(gn)
     # i=0
     for node in gn:
         neighs = G[node]
