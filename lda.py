@@ -1,4 +1,4 @@
-import graph2 as graph
+import graph
 
 import gensim
 from gensim.utils import simple_preprocess
@@ -8,6 +8,8 @@ from nltk.stem.porter import *
 import numpy as np
 from gensim import corpora, models
 
+from scipy.special import kl_div as kl
+
 
 np.random.seed(2018)
 import nltk
@@ -15,17 +17,18 @@ nltk.download('wordnet')
 
 
 class LDA:
-    def __init__(self, graph):
-        self.graph = graph
+    def __init__(self, pages):
+        self.pages = pages
         self.stemmer = SnowballStemmer("english")
         print("Preprocessing the dataset")
-        preprocessed_documents = [self._preprocess_document(x.text()) for x in graph.nodes()]
+        preprocessed_documents = [self._preprocess_document(x.text()) for x in pages]
         self.dictionary = gensim.corpora.Dictionary(preprocessed_documents)
         self.dictionary.filter_extremes(no_below=15, no_above=0.5, keep_n=100000)
         print(len(self.dictionary))
         bow_corpus = [self.dictionary.doc2bow(doc) for doc in preprocessed_documents]
         tfidf = models.TfidfModel(bow_corpus)
         self.corpus_tfidf = tfidf[bow_corpus]
+        self.lda_model = None
 
     def _preprocess_document(self, text):
         # text= text.decode("utf-8")
@@ -38,12 +41,35 @@ class LDA:
                 result.append(lemmatize_stemming(token))
         return result
 
-    def fit(self, n_topics = 10, passes = 2, workers = 2):
+    def compare(self, other):
+        # Compare our lda model versus another one using the average KL divergence between each of the topics
+        assert(isinstance(other, type(self)))
+        divergences = []
+        for ti in range(self.lda_model.num_topics):
+            for tj in range(other.lda_model.num_topics):
+                topic_i = self.lda_model.state.get_lambda()[ti]
+                topic_i = topic_i / topic_i.sum()
+                topic_j = self.lda_model.state.get_lambda()[tj]
+                topic_j = topic_j / topic_j.sum()
+                divergences.append(kl(topic_i, topic_j))
+
+        return np.mean(np.array(divergences))
+
+    def fit(self, n_topics = 10, passes = 20, workers = 8):
         self.lda_model = gensim.models.LdaMulticore(self.corpus_tfidf, num_topics=n_topics, id2word=self.dictionary, passes=passes, workers=workers)
+
+    def infer(self, text):
+        # first make bow vector of text
+        preprocessed = self._preprocess_document(text)
+        bow_vector = self.dictionary.doc2bow(preprocessed)
+        scores = []
+        for _, score in self.lda_model[bow_vector]:
+            scores.append(score)
+        return np.array(scores)
 
 def main():
     g = graph.Graph()
-    l = LDA(g)
+    l = LDA(g.nodes())
     l.fit(n_topics=100, workers=8, passes=10)
     for idx, topic in l.lda_model.print_topics(-1):
         print('Topic: {} \nWords: {}'.format(idx, topic))

@@ -6,6 +6,7 @@ import random
 
 def chinese_whispers(g):
     G = g.graph
+    g.add_path_weights()
 
     for page in G.nodes:
         page.cluster = page.idx

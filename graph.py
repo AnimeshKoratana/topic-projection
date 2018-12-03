@@ -33,6 +33,9 @@ class Page():
         assert(isinstance(other, Page))
         return self.graph.shortest_path_length(self, other)
 
+    def __str__(self):
+        return str(self.idx) + " " +  self.title()
+
     def shortest_path_length_to(self, other):
         return self.__sub__(other)
 
@@ -99,14 +102,19 @@ class Graph():
         lines = l.read().split("\n")[16:-1]
         for idx, line in enumerate(lines):
             row = line.strip(' ')
-            pathString = article.split("\t")[3]
+            pathString = row.split("\t")[3].strip()
             path = pathString.split(";")
-            pathPages = [self.pg_map(text) for text in path]
+            pathPages = [self.pg_map[text] for text in path if text != '<']
 
             for i in range(len(pathPages)-1):
                 decay = 1
                 for j in range(i+1, len(pathPages)):
-                    self.graph.add_edge(pathPages[i], pathPages[j], weight = 1/decay)
+                    if self.graph.has_edge(pathPages[i], pathPages[j]):
+                        old_weight = self.graph[pathPages[i]][pathPages[j]]['weight']
+                        self.graph.remove_edge(pathPages[i], pathPages[j])
+                    else:
+                        old_weight = 0
+                    self.graph.add_edge(pathPages[i], pathPages[j], weight = old_weight + (1/decay))
                     decay += 1
         l.close()
 
