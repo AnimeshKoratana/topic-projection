@@ -89,7 +89,7 @@ class Graph():
         for link in self._links:
             source, target = link.split('\t')
             source, target = source.strip(), target.strip()
-            self.graph.add_edge(self.pg_map[source], self.pg_map[target], weight=1)
+            self.graph.add_edge(self.pg_map[source], self.pg_map[target], weight=0.1)
         x = []
         for page in self.graph.nodes:
             if len(list(self.graph.neighbors(page))) == 0:
@@ -114,7 +114,7 @@ class Graph():
                         self.graph.remove_edge(pathPages[i], pathPages[j])
                     else:
                         old_weight = 0
-                    self.graph.add_edge(pathPages[i], pathPages[j], weight = old_weight + (1/decay))
+                    self.graph.add_edge(pathPages[i], pathPages[j], weight = old_weight + (1/ 2**(decay)))
                     decay += 1
         l.close()
 
