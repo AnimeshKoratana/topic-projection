@@ -58,6 +58,7 @@ class Page():
 class Graph():
     def __init__(self, seed = None, num_pages= "all"):
         self.graph = nx.Graph()
+        self.pg_map = {}
         print("Loading Dataset")
         l = open("data/wikispeedia_paths-and-graph/links.tsv", 'r')
         self._links = l.read().split("\n")[12:-1]
@@ -73,29 +74,41 @@ class Graph():
             if article is not None:
                 pg = Page(idx, article, self.graph)
                 self._articles.append(pg)
+                self.pg_map[article] = pg
         a.close()
         self._build_graph()
         print("Done.")
 
     def _build_graph(self):
-        def idx_of(text):
-            for idx, a in enumerate(self._articles):
-                if text == a.title():
-                    return idx
-
         for page in self._articles:
             self.graph.add_node(page)
 
         for link in self._links:
             source, target = link.split('\t')
             source, target = source.strip(), target.strip()
-            self.graph.add_edge(self._articles[idx_of(source)], self._articles[idx_of(target)], weight=1)
+            self.graph.add_edge(self.pg_map[source], self.pg_map[target], weight=1)
         x = []
         for page in self.graph.nodes:
             if len(list(self.graph.neighbors(page))) == 0:
                 x.append(page)
         for p in x:
             self.graph.remove_node(p)
+
+    def add_path_weights(self):
+        l = open("data/wikispeedia_paths-and-graph/paths_finished.tsv", 'r')
+        lines = l.read().split("\n")[16:-1]
+        for idx, line in enumerate(lines):
+            row = line.strip(' ')
+            pathString = article.split("\t")[3]
+            path = pathString.split(";")
+            pathPages = [self.pg_map(text) for text in path]
+
+            for i in range(len(pathPages)-1):
+                decay = 1
+                for j in range(i+1, len(pathPages)):
+                    self.graph.add_edge(pathPages[i], pathPages[j], weight = 1/decay)
+                    decay += 1
+        l.close()
 
     def __len__(self):
         return len(list(self.graph.nodes))
