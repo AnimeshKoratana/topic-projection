@@ -46,7 +46,10 @@ def chinese_whispers(g):
         if page.cluster not in clusters:
             clusters[page.cluster] = set()
         clusters[page.cluster].add(page)
+    plot(G, name="chinese_whispers.png")
+    return clusters
 
+def plot(G, name="chinese_whispers.png"):
     # Initialize color scheme so it spans the range of cluster values
     minCluster = None
     maxCluster = None
@@ -65,13 +68,16 @@ def chinese_whispers(g):
 
     nx.draw_networkx(G, with_labels=False,cmap=plt.get_cmap('RdYlBu'), node_color=colors, font_color='white')
 
-    plt.savefig("chinese_whispers.png")
+    plt.savefig(name)
     plt.show()
-    return clusters
 
-orig_graph = graph.Graph()
-clusters = chinese_whispers(orig_graph)
+def main():
+    orig_graph = graph.Graph()
+    clusters = chinese_whispers(orig_graph)
 
-print("total number of clusters:", len(clusters))
-for cluster in clusters:
-    print(cluster)
+    print("total number of clusters:", len(clusters))
+    for cluster in clusters:
+        print(cluster)
+        
+if __name__ == '__main__':
+    main()

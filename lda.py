@@ -42,37 +42,41 @@ class LDA:
         return result
 
     def compare(self, other):
-        # Compare our lda model versus another one using the average KL divergence between each of the topics
+        # Compare our lda model versus another one using the average Jenson Shannon Divergence between each of the topics
         assert(isinstance(other, type(self)))
         divergences = []
         for ti in range(self.lda_model.num_topics):
             for tj in range(other.lda_model.num_topics):
                 topic_i = self.lda_model.state.get_lambda()[ti]
                 topic_i = topic_i / topic_i.sum()
-                topic_j = self.lda_model.state.get_lambda()[tj]
+                topic_j = other.lda_model.state.get_lambda()[tj]
                 topic_j = topic_j / topic_j.sum()
-                divergences.append(kl(topic_i, topic_j))
+                M = 0.5 * (topic_i + topic_j)
+                jsd = 0.5 * kl(topic_i, M) + 0.5 * kl(topic_j, M)
+                divergences.append(jsd)
 
         return np.mean(np.array(divergences))
+
+    def __call__(self, x):
+        return self.infer(x)
 
     def fit(self, n_topics = 10, passes = 20, workers = 8):
         self.lda_model = gensim.models.LdaMulticore(self.corpus_tfidf, num_topics=n_topics, id2word=self.dictionary, passes=passes, workers=workers)
 
     def infer(self, text):
         # first make bow vector of text
+        # returns a [(topic_id, p(topic)) ...]
         preprocessed = self._preprocess_document(text)
         bow_vector = self.dictionary.doc2bow(preprocessed)
-        scores = []
-        for _, score in self.lda_model[bow_vector]:
-            scores.append(score)
-        return np.array(scores)
+        distribution = self.lda_model.get_document_topics(bow_vector)
+        return distribution
 
-def main():
-    g = graph.Graph()
-    l = LDA(g.nodes())
-    l.fit(n_topics=100, workers=8, passes=10)
-    for idx, topic in l.lda_model.print_topics(-1):
-        print('Topic: {} \nWords: {}'.format(idx, topic))
-
-if __name__ == '__main__':
-    main()
+# def main():
+#     g = graph.Graph()
+#     l = LDA(g.nodes())
+#     l.fit(n_topics=100, workers=8, passes=10)
+#     for idx, topic in l.lda_model.print_topics(-1):
+#         print('Topic: {} \nWords: {}'.format(idx, topic))
+#
+# if __name__ == '__main__':
+#     main()
