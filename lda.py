@@ -17,7 +17,8 @@ nltk.download('wordnet')
 
 
 class LDA:
-    def __init__(self, pages):
+    def __init__(self, pages, eval_percent=0):
+        cutoff = int(len(pages) - (len(pages) * (eval_percent/100)))
         self.pages = pages
         self.stemmer = SnowballStemmer("english")
         print("Preprocessing the dataset")
@@ -25,10 +26,14 @@ class LDA:
         self.dictionary = gensim.corpora.Dictionary(preprocessed_documents)
         self.dictionary.filter_extremes(no_below=15, no_above=0.5, keep_n=100000)
         print(len(self.dictionary))
-        bow_corpus = [self.dictionary.doc2bow(doc) for doc in preprocessed_documents]
+        bow_corpus = [self.dictionary.doc2bow(doc) for doc in preprocessed_documents[:cutoff]]
         tfidf = models.TfidfModel(bow_corpus)
         self.corpus_tfidf = tfidf[bow_corpus]
         self.lda_model = None
+
+        val_corpus = [self.dictionary.doc2bow(doc) for doc in preprocessed_documents[cutoff+1:]]
+        val_tfidf = models.TfidfModel(val_corpus)
+        self.corpus_tfidf_val = val_tfidf[val_corpus]
 
     def _preprocess_document(self, text):
         # text= text.decode("utf-8")
@@ -70,6 +75,9 @@ class LDA:
         bow_vector = self.dictionary.doc2bow(preprocessed)
         distribution = self.lda_model.get_document_topics(bow_vector)
         return distribution
+
+    def average_perplexity(self):
+        return np.mean(self.lda_model.log_perplexity(self.corpus_tfidf_val))
 
 # def main():
 #     g = graph.Graph()

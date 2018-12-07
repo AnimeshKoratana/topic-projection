@@ -26,6 +26,9 @@ class Page():
     def __eq__(self, x):
         return self.idx == x.idx
 
+    def __int__(self):
+        return self.idx
+
     def __hash__(self):
         return self.idx
 
