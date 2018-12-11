@@ -1,37 +1,62 @@
 import graph
-
-import torch
+import networkx as nx
+import matplotlib.pyplot as plt
 import numpy as np
-import eval
+import random
 
-def vectorizedKMeans(graph, k):
-    with torch.no_grad():
-        centroids = torch.rand(k)
-        old_centroids = centroids.clone() - 1
-        i = 0
-        while torch.norm(torch.add(centroids, -old_centroids)) > 1e-15:
-            i+= 1
-            print(i, torch.norm(torch.add(centroids, -old_centroids)))
-            old_centroids = centroids.clone()
-            for page in graph:
-                closest_mean = None
-                for mean in centroids:
-                    if closest_mean is None or torch.norm(torch.add(page.embedding(), -mean)) < torch.norm(torch.add(page.embedding(), -closest_mean)):
-                        closest_mean = mean
-                page.mean = closest_mean
+def k_means(g, k):
+    G = g.graph
+    g.add_path_weights()
 
-            for mean in centroids:
-                sum_inputs = 0
-                num = 0
-                for page in graph:
-                    if page.mean == mean:
-                        sum_inputs += page.embedding()
-                        num += 1
-                mean = sum_inputs/num
+    centroid_indices = np.random.choice(len(G.nodes), k, replace=False)
+    nodes = list(G.nodes)
+    centroids = set([nodes[i] for i in centroid_indices])
 
-def main():
-    g = graph.Graph()
-    vectorizedKMeans(g, 10)
-    
-if __name__ == '__main__':
-    main()
+    clusterAssignments = {}
+    for page in G.nodes:
+        clusterAssignments[page] = centroids[np.random.randint(k)]
+
+    # clusterAssignments = {(i, set()) for i in centroids}
+    # for page in G.nodes:
+    #     clusterAssignments[np.random.randint(k)] = page
+
+    old_centroids = None
+
+    while old_centroids != centroids:
+        old_centroids = centroids.copy()
+
+        clusterSets = {(i, set()) for i in centroids}
+
+        for page in G.nodes:
+            closestDistance = 0
+            closest = None
+            for centroid in centroids:
+                currDistance = max(centroid-page, page-centroid)
+                if closest is None or currDistance > closest:
+                    closest = centroid
+                    closestDistance = currDistance
+
+            clusterAssignments[page] = closest
+            clusterSets[closest].add(page)
+
+        centroids = set()
+
+        for centroid in old_centroids:
+            assignedNodes = clusterSets[centroid]
+            centralNode = None
+            centralDistance = 0
+            for node in assignedNodes:
+                distance = 0
+                for node2 in assignedNodes.copy():
+                    distance += (node-node2)
+                if centralNode is None or distance > centralDistance:
+                    centralNode = node
+                    centralDistance = distance
+            centroids.add()
+
+
+
+
+    for cluster in clusters:
+        for page in clusters[cluster]:
+            page.cluster = cluster
