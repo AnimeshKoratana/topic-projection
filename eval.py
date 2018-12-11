@@ -1,4 +1,17 @@
 import numpy as np
+import markov_clustering as mc
+
+
+def modularity(matrix, clusters):
+    if type(clusters) == dict:
+        # we need to convert it to the right format
+        x = []
+        for c in clusters.values():
+            items = tuple(i.idx for i in c)
+            x.append(items)
+        clusters = x
+    Q = mc.modularity(matrix=matrix, clusters=clusters)
+    return Q
 
 def davies_bouldin(graph, clusters, centroids, n_clusters):
     # Calculate mean distance in each cluster
